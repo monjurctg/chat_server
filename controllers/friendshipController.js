@@ -1,18 +1,56 @@
 const { Op } = require('sequelize');
 const Friendship = require('../models/Friendship');
 const User = require('../models/User');
+const sequelize = require('../config/database');
 
-exports.getAllUser=async(req,res)=>{
-    try {
-        const users = await User.findAll();
-        res.json(users);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-}
+
+
+exports.getSuggestUser = async (req, res) => {
+  try {
+  
+    const authUserId = req.user.id; // Authenticated user's ID
+
+    // Find all friendships where the authenticated user is either sender or receiver
+    const friendships = await Friendship.findAll({
+      where: {
+        [Op.or]: [
+          { senderId: authUserId },
+          { receiverId: authUserId },
+        ],
+      },
+      attributes: ['senderId', 'receiverId', 'status'],
+    });
+
+    // Extract IDs of friends or pending requests
+    const excludedIds = friendships.map(f => 
+      f.senderId === authUserId ? f.receiverId : f.senderId
+    );
+
+    // Add the authenticated user's ID to the exclusion list
+    excludedIds.push(authUserId);
+
+    // Fetch random users excluding self, friends, and pending requests
+    const users = await User.findAll({
+      where: {
+        id: { [Op.notIn]: excludedIds },
+      },
+      attributes: { exclude: ['password'] }, 
+      order: sequelize.random(), // Randomize results
+      limit: 10, // Adjust limit as needed
+    });
+
+    res.json(users);
+  } catch (err) {
+    console.log(err)
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
 // Send Friend Request
 exports.sendFriendRequest = async (req, res) => {
-  const { senderId, receiverId } = req.body;
+  const {  receiverId } = req.body;
+  const senderId = req.user.id
 
   try {
     // Check if request already exists
@@ -42,7 +80,8 @@ exports.sendFriendRequest = async (req, res) => {
 
 // Respond to Friend Request
 exports.acceptFriendRequest = async (req, res) => {
-    const { senderId, receiverId } = req.body;
+    const {receiverId } = req.body;
+    const senderId = req.user.id
 
     try {
       // Find and update the original friendship record
@@ -126,7 +165,8 @@ exports.listFriends = async (req, res) => {
 
 // Remove Friend
 exports.declineFriendRequest = async (req, res) => {
-    const { senderId, receiverId } = req.body;
+  const senderId = req.user.id
+    const { receiverId } = req.body;
 
     try {
       // Find and update the friendship record
@@ -152,3 +192,29 @@ exports.declineFriendRequest = async (req, res) => {
     }
   };
 
+
+
+  exports.getFriendshipStatus = async (req, res) => {
+    const senderId = req.user.id;  // Get the sender's user ID from the authenticated user
+    const { receiverId } = req.query;  // Receiver ID from query parameter
+  
+    try {
+      // Fetch friendship status from the database
+      const friendship = await Friendship.findOne({
+        where: {
+          senderId,
+          receiverId,
+        },
+      });
+  
+      if (!friendship) {
+        return res.status(404).json({ status: 'none' });  // No friendship request
+      }
+  
+      // Return the current friendship status
+      return res.json({ status: friendship.status });
+    } catch (error) {
+      console.error('Error fetching friendship status:', error);
+      return res.status(500).json({ message: 'Server error' });
+    }
+  };
