@@ -7,7 +7,6 @@ const sequelize = require('../config/database');
 
 exports.getSuggestUser = async (req, res) => {
   try {
-  
     const authUserId = req.user.id; // Authenticated user's ID
 
     // Find all friendships where the authenticated user is either sender or receiver
@@ -18,33 +17,34 @@ exports.getSuggestUser = async (req, res) => {
           { receiverId: authUserId },
         ],
       },
-      attributes: ['senderId', 'receiverId', 'status'],
+      attributes: ['senderId', 'receiverId', 'status'], // Include friendship status
     });
 
     // Extract IDs of friends or pending requests
-    const excludedIds = friendships.map(f => 
-      f.senderId === authUserId ? f.receiverId : f.senderId
-    );
+    const excludedIds = friendships
+      .filter(f => f.status === 'accepted')
+      .map(f => (f.senderId === authUserId ? f.receiverId : f.senderId));
 
     // Add the authenticated user's ID to the exclusion list
     excludedIds.push(authUserId);
 
-    // Fetch random users excluding self, friends, and pending requests
+    // Fetch random users excluding self, friends, and those with pending requests
     const users = await User.findAll({
       where: {
         id: { [Op.notIn]: excludedIds },
       },
-      attributes: { exclude: ['password'] }, 
+      attributes: { exclude: ['password'] }, // Exclude sensitive data
       order: sequelize.random(), // Randomize results
       limit: 10, // Adjust limit as needed
     });
 
     res.json(users);
   } catch (err) {
-    console.log(err)
+    console.log(err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 
 // Send Friend Request
@@ -94,7 +94,7 @@ exports.acceptFriendRequest = async (req, res) => {
       });
 
       if (!request) {
-        return res.status(404).json({ message: 'Request not found' });
+        return res.json({ message: 'Request not found' });
       }
 
       // Update the status to 'accepted'
@@ -197,7 +197,7 @@ exports.declineFriendRequest = async (req, res) => {
   exports.getFriendshipStatus = async (req, res) => {
     const senderId = req.user.id;  // Get the sender's user ID from the authenticated user
     const { receiverId } = req.query;  // Receiver ID from query parameter
-  
+
     try {
       // Fetch friendship status from the database
       const friendship = await Friendship.findOne({
@@ -206,11 +206,11 @@ exports.declineFriendRequest = async (req, res) => {
           receiverId,
         },
       });
-  
-      if (!friendship) {
-        return res.status(404).json({ status: 'none' });  // No friendship request
+
+      if (friendship==null) {
+        return res.json({ status: 'none' });  // No friendship request
       }
-  
+
       // Return the current friendship status
       return res.json({ status: friendship.status });
     } catch (error) {
