@@ -47,29 +47,35 @@ exports.getSuggestUser = async (req, res) => {
 
 
 exports.getFriendList = async (req, res) => {
-  const senderId = req.user.id
-  try {
-    const request = await Friendship.findOne({
-      where: {
-        [Op.or]: [
-          { senderId,status:"accepted" },
-        ],
+  const senderId = req.user.id;
 
+  try {
+    const friendships = await Friendship.findAll({
+      where: {
+        senderId,
+        status: 'accepted',
       },
+      include: [
+        {
+          model: User,
+          as: 'receiver', // alias for the User model in Friendship
+          attributes: ['id', 'name', 'phone', 'email'], // specify which user attributes you need
+        }
+      ],
     });
 
-
-
-    if (!request) {
-      return res.json({ message: 'No User' });
+    if (friendships.length === 0) {
+      return res.json({ message: 'No friends found' });
     }
 
 
-    res.status(200).json({ request });
+    res.status(200).json({ friends:friendships });
   } catch (err) {
+    console.log(err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 
 
@@ -139,7 +145,7 @@ exports.acceptFriendRequest = async (req, res) => {
     // console.log({reverseRequestExists},receiverId,senderId)
 
     if (!reverseRequestExists) {
-      console.log("not exit")
+      // console.log("not exit")
       // Create the reverse relationship for bidirectionality
       await Friendship.create({
         senderId,

@@ -33,10 +33,12 @@ const User = sequelize.define('User', {
 });
 
 // Associations
-User.hasMany(Friendship, { foreignKey: 'senderId' });
-User.hasMany(Friendship, { foreignKey: 'receiverId' });
+User.hasMany(Friendship, { foreignKey: 'senderId', as: 'sentRequests' });
+User.hasMany(Friendship, { foreignKey: 'receiverId', as: 'receivedRequests' });
 
 Friendship.belongsTo(User, { foreignKey: 'senderId', as: 'sender' });
 Friendship.belongsTo(User, { foreignKey: 'receiverId', as: 'receiver' });
+
+
 
 module.exports = User;
