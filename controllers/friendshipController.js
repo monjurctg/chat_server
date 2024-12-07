@@ -106,39 +106,58 @@ exports.sendFriendRequest = async (req, res) => {
 
 // Respond to Friend Request
 exports.acceptFriendRequest = async (req, res) => {
-  const { receiverId } = req.body;
-  const senderId = req.user.id
-  console.log({senderId,receiverId})
+  const { receiverId } = req.body; // The person who sent the original request
+  const senderId = req.user.id; // The person accepting the request
+
   try {
+    // Find the pending friend request
     const request = await Friendship.findOne({
       where: {
         [Op.or]: [
-          { senderId, receiverId,status:"pending" },
-          { senderId: receiverId, receiverId: senderId ,status:"pending" },
+          { senderId, receiverId, status: "pending" },
+          { senderId: receiverId, receiverId: senderId, status: "pending" },
         ],
-
       },
     });
 
-
-
     if (!request) {
-      return res.json({ message: 'Request not found' });
+      return res.status(404).json({ message: "Friend request not found" });
     }
 
-    request.status = 'accepted';
+    // Update the original request status to 'accepted'
+    request.status = "accepted";
     await request.save();
-    await Friendship.create({
-      senderId: receiverId,
-      receiverId: senderId,
-      status: 'accepted',
-    });
 
-    res.status(200).json({ message: 'Friend request accepted' });
+    // Check if the reverse relationship already exists
+    const reverseRequestExists = await Friendship.findOne({
+      where: {
+        [Op.or]: [
+          { senderId, receiverId },
+        ],
+      },
+    });
+    console.log({reverseRequestExists},receiverId,senderId)
+
+    if (!reverseRequestExists) {
+      console.log("not exit")
+      // Create the reverse relationship for bidirectionality
+      await Friendship.create({
+        senderId,
+        receiverId,
+        status: "accepted",
+      });
+    }
+
+    res.status(200).json({
+      message: "Friend request accepted",
+      friendship: request,
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Error accepting friend request:", err);
+    res.status(500).json({ message: "An error occurred while accepting the request" });
   }
 };
+
 
 
 exports.getFriendRequests = async (req, res) => {
