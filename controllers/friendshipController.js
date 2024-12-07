@@ -48,14 +48,11 @@ exports.getSuggestUser = async (req, res) => {
 
 exports.getFriendList = async (req, res) => {
   const senderId = req.user.id
-
-  console.log({senderId})
   try {
     const request = await Friendship.findOne({
       where: {
         [Op.or]: [
           { senderId,status:"accepted" },
-
         ],
 
       },
