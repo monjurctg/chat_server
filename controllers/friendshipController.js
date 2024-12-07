@@ -171,7 +171,7 @@ exports.declineFriendRequest = async (req, res) => {
 
 
   try {
-    // Find and update the friendship record
+
     const request = await Friendship.findOne({
       where: {
         [Op.or]: [
@@ -186,8 +186,7 @@ exports.declineFriendRequest = async (req, res) => {
     }
 
     // Update the status to 'declined'
-    request.status = 'declined';
-    await request.save();
+    await request.destroy();
 
     res.status(200).json({ message: 'Friend request declined' });
   } catch (err) {
