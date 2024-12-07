@@ -16,7 +16,7 @@ router.post('/respondRequest',authMiddleware, acceptFriendRequest);
 router.get('/listFriends/:userId',authMiddleware, listFriends);
 
 // Remove Friend
-router.delete('/removeFriend',authMiddleware, declineFriendRequest);
+router.post('/removeFriend',authMiddleware, declineFriendRequest);
 router.get('/friend_status',authMiddleware, getFriendshipStatus);
 
 

@@ -49,7 +49,7 @@ exports.getSuggestUser = async (req, res) => {
 
 // Send Friend Request
 exports.sendFriendRequest = async (req, res) => {
-  const {  receiverId } = req.body;
+  const { receiverId } = req.body;
   const senderId = req.user.id
 
   try {
@@ -80,63 +80,63 @@ exports.sendFriendRequest = async (req, res) => {
 
 // Respond to Friend Request
 exports.acceptFriendRequest = async (req, res) => {
-    const {receiverId } = req.body;
-    const senderId = req.user.id
+  const { receiverId } = req.body;
+  const senderId = req.user.id
 
-    try {
-      // Find and update the original friendship record
-      const request = await Friendship.findOne({
-        where: {
-          senderId,
-          receiverId,
-          status: 'pending',
-        },
-      });
+  try {
+    // Find and update the original friendship record
+    const request = await Friendship.findOne({
+      where: {
+        senderId,
+        receiverId,
+        status: 'pending',
+      },
+    });
 
-      if (!request) {
-        return res.json({ message: 'Request not found' });
-      }
-
-      // Update the status to 'accepted'
-      request.status = 'accepted';
-      await request.save();
-
-      // Create the reverse record to establish mutual friendship
-      await Friendship.create({
-        senderId: receiverId,
-        receiverId: senderId,
-        status: 'accepted',
-      });
-
-      res.status(200).json({ message: 'Friend request accepted' });
-    } catch (err) {
-      res.status(500).json({ message: err.message });
+    if (!request) {
+      return res.json({ message: 'Request not found' });
     }
-  };
+
+    // Update the status to 'accepted'
+    request.status = 'accepted';
+    await request.save();
+
+    // Create the reverse record to establish mutual friendship
+    await Friendship.create({
+      senderId: receiverId,
+      receiverId: senderId,
+      status: 'accepted',
+    });
+
+    res.status(200).json({ message: 'Friend request accepted' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 
-  exports.getFriendRequests = async (req, res) => {
-    const { userId } = req.params;
+exports.getFriendRequests = async (req, res) => {
+  const { userId } = req.params;
 
-    try {
-      // Get all pending friend requests where the user is the receiver
-      const requests = await Friendship.findAll({
-        where: {
-          receiverId: userId,
-          status: 'pending',
-        },
-        include: {
-          model: User,
-          as: 'sender',
-          attributes: ['id', 'name', 'email'],
-        },
-      });
+  try {
+    // Get all pending friend requests where the user is the receiver
+    const requests = await Friendship.findAll({
+      where: {
+        receiverId: userId,
+        status: 'pending',
+      },
+      include: {
+        model: User,
+        as: 'sender',
+        attributes: ['id', 'name', 'email'],
+      },
+    });
 
-      res.status(200).json({ requests });
-    } catch (err) {
-      res.status(500).json({ message: err.message });
-    }
-  };
+    res.status(200).json({ requests });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 // List Friends
 exports.listFriends = async (req, res) => {
@@ -144,18 +144,18 @@ exports.listFriends = async (req, res) => {
 
   try {
     const friends = await Friendship.findAll({
-        where: {
-          status: 'accepted',
-          [Op.or]: [
-            { senderId: userId },
-            { receiverId: userId },
-          ],
-        },
-        include: [
-          { model: User, as: 'sender', attributes: ['id', 'name'] },
-          { model: User, as: 'receiver', attributes: ['id', 'name'] },
+      where: {
+        status: 'accepted',
+        [Op.or]: [
+          { senderId: userId },
+          { receiverId: userId },
         ],
-      });
+      },
+      include: [
+        { model: User, as: 'sender', attributes: ['id', 'name'] },
+        { model: User, as: 'receiver', attributes: ['id', 'name'] },
+      ],
+    });
 
     res.status(200).json({ friends });
   } catch (err) {
@@ -166,55 +166,63 @@ exports.listFriends = async (req, res) => {
 // Remove Friend
 exports.declineFriendRequest = async (req, res) => {
   const senderId = req.user.id
-    const { receiverId } = req.body;
+  const { receiverId } = req.body;
 
-    try {
-      // Find and update the friendship record
-      const request = await Friendship.findOne({
-        where: {
-          senderId,
-          receiverId,
-          status: 'pending',
-        },
-      });
 
-      if (!request) {
-        return res.status(404).json({ message: 'Request not found' });
-      }
 
-      // Update the status to 'declined'
-      request.status = 'declined';
-      await request.save();
+  try {
+    // Find and update the friendship record
+    const request = await Friendship.findOne({
+      where: {
+        [Op.or]: [
+          { senderId, receiverId,status:"pending" },
+          { senderId: receiverId, receiverId: senderId ,status:"pending" },
+        ],
+      },
+    });
 
-      res.status(200).json({ message: 'Friend request declined' });
-    } catch (err) {
-      res.status(500).json({ message: err.message });
+    if (!request) {
+      return res.json({ message: 'Request not found' });
     }
-  };
+
+    // Update the status to 'declined'
+    request.status = 'declined';
+    await request.save();
+
+    res.status(200).json({ message: 'Friend request declined' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
 
 
+exports.getFriendshipStatus = async (req, res) => {
+  const senderId = req.user.id;
+  const { receiverId } = req.query;
 
-  exports.getFriendshipStatus = async (req, res) => {
-    const senderId = req.user.id;  // Get the sender's user ID from the authenticated user
-    const { receiverId } = req.query;  // Receiver ID from query parameter
+  if (!receiverId) {
+    return res.status(400).json({ message: 'receiverId is required' });
+  }
 
-    try {
-      // Fetch friendship status from the database
-      const friendship = await Friendship.findOne({
-        where: {
-          senderId,
-          receiverId,
-        },
-      });
+  try {
+    // Check for friendship in both directions
+    const friendship = await Friendship.findOne({
+      where: {
+        [Op.or]: [
+          { senderId, receiverId },
+          { senderId: receiverId, receiverId: senderId },
+        ],
+      },
+    });
 
-      if (friendship==null) {
-        return res.json({ status: 'none' });  // No friendship request
-      }
 
-      // Return the current friendship status
-      return res.json({ status: friendship.status });
-    } catch (error) {
-      console.error('Error fetching friendship status:', error);
-      return res.status(500).json({ message: 'Server error' });
+    if (!friendship) {
+      return res.json({ status: 'none' });
     }
-  };
+
+    return res.json({ status: friendship.status,senderId: friendship.senderId});
+  } catch (error) {
+    console.error('Error fetching friendship status:', error);
+    return res.status(500).json({ message: 'Server error' });
+  }
+};

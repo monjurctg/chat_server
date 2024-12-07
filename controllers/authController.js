@@ -8,7 +8,7 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 exports.register = async (req, res) => {
-  
+
   const { name, email,phone, password } = req.body;
   console.log({phone})
 
@@ -33,6 +33,20 @@ exports.login = async (req, res) => {
 
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '24h' });
     res.json({ token, user });
+  } catch (err) {
+    console.log(err.message)
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+exports.getLoginUser = async (req, res) => {
+  const id = req.user.id
+  try {
+    const user = await User.findOne({ where: { id } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    res.json({ user });
   } catch (err) {
     console.log(err.message)
     res.status(500).json({ message: err.message });
