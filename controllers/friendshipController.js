@@ -82,26 +82,26 @@ exports.sendFriendRequest = async (req, res) => {
 exports.acceptFriendRequest = async (req, res) => {
   const { receiverId } = req.body;
   const senderId = req.user.id
-
+  console.log({senderId,receiverId})
   try {
-    // Find and update the original friendship record
     const request = await Friendship.findOne({
       where: {
-        senderId,
-        receiverId,
-        status: 'pending',
+        [Op.or]: [
+          { senderId, receiverId,status:"pending" },
+          { senderId: receiverId, receiverId: senderId ,status:"pending" },
+        ],
+
       },
     });
+
+
 
     if (!request) {
       return res.json({ message: 'Request not found' });
     }
 
-    // Update the status to 'accepted'
     request.status = 'accepted';
     await request.save();
-
-    // Create the reverse record to establish mutual friendship
     await Friendship.create({
       senderId: receiverId,
       receiverId: senderId,
