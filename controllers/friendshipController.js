@@ -136,7 +136,7 @@ exports.acceptFriendRequest = async (req, res) => {
         ],
       },
     });
-    console.log({reverseRequestExists},receiverId,senderId)
+    // console.log({reverseRequestExists},receiverId,senderId)
 
     if (!reverseRequestExists) {
       console.log("not exit")
