@@ -120,7 +120,7 @@ exports.acceptFriendRequest = async (req, res) => {
     const request = await Friendship.findOne({
       where: {
         [Op.or]: [
-          { senderId, receiverId, status: "pending" },
+          // { senderId, receiverId, status: "pending" },
           { senderId: receiverId, receiverId: senderId, status: "pending" },
         ],
       },
@@ -142,14 +142,14 @@ exports.acceptFriendRequest = async (req, res) => {
         ],
       },
     });
-    // console.log({reverseRequestExists},receiverId,senderId)
+console.log({reverseRequestExists})
 
     if (!reverseRequestExists) {
-      // console.log("not exit")
-      // Create the reverse relationship for bidirectionality
+      console.log("not exit")
+
       await Friendship.create({
-        senderId,
-        receiverId,
+        senderId:senderId,
+        receiverId:receiverId,
         status: "accepted",
       });
     }

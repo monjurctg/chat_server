@@ -35,21 +35,21 @@ const Friendship = sequelize.define('Friendship', {
 
 
 // Hook to prevent reverse duplicates
-Friendship.beforeValidate(async (friendship) => {
-  const reverseExists = await Friendship.findOne({
-    where: {
-      senderId: friendship.receiverId,
-      receiverId: friendship.senderId,
-    },
-  });
-  if (reverseExists) {
-    throw new Error('Friendship already exists in reverse!');
-  }
-});
+// Friendship.beforeValidate(async (friendship) => {
+//   const reverseExists = await Friendship.findOne({
+//     where: {
+//       senderId: friendship.receiverId,
+//       receiverId: friendship.senderId,
+//     },
+//   });
+//   if (reverseExists) {
+//     throw new Error('Friendship already exists in reverse!');
+//   }
+// });
 
 // Optional: Validate user existence
 Friendship.beforeCreate(async (friendship) => {
-  console.log({friendship})
+  // console.log({friendship})
   // const senderExists = await User.findByPk(friendship.senderId);
   // const receiverExists = await User.findByPk(friendship.receiverId);
 
