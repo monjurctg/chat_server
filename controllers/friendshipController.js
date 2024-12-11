@@ -45,36 +45,88 @@ exports.getSuggestUser = async (req, res) => {
   }
 };
 
-
 exports.getFriendList = async (req, res) => {
-  const senderId = req.user.id;
+  const userId = req.user.id; // Current logged-in user ID
 
   try {
     const friendships = await Friendship.findAll({
       where: {
-        senderId,
         status: 'accepted',
+        [Op.or]: [
+          { senderId: userId },
+          { receiverId: userId },
+        ],
       },
       include: [
         {
           model: User,
-          as: 'receiver', // alias for the User model in Friendship
-          attributes: ['id', 'name', 'phone', 'email'], // specify which user attributes you need
-        }
+          as: 'sender', // Include the sender details
+          attributes: ['id', 'name', 'phone', 'email'],
+        },
+        {
+          model: User,
+          as: 'receiver', // Include the receiver details
+          attributes: ['id', 'name', 'phone', 'email'],
+        },
       ],
     });
 
-    if (friendships.length === 0) {
+    // Format the friends list to only include unique users
+    const friendsMap = new Map();
+
+    friendships.forEach(friendship => {
+      if (friendship.senderId === userId) {
+        friendsMap.set(friendship.receiver.id, friendship.receiver);
+      } else {
+        friendsMap.set(friendship.sender.id, friendship.sender);
+      }
+    });
+
+    // Convert the Map values into an array
+    const friends = Array.from(friendsMap.values());
+
+    if (friends.length === 0) {
       return res.json({ message: 'No friends found' });
     }
 
-
-    res.status(200).json({ friends:friendships });
+    res.status(200).json({ friends });
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: err.message });
+    console.error(err);
+    res.status(500).json({ message: 'An error occurred while fetching the friend list.' });
   }
 };
+
+
+
+// exports.getFriendList = async (req, res) => {
+//   const senderId = req.user.id;
+
+//   try {
+//     const friendships = await Friendship.findAll({
+//       where: {
+//         senderId,
+//         status: 'accepted',
+//       },
+//       include: [
+//         {
+//           model: User,
+//           as: 'receiver',
+//           attributes: ['id', 'name', 'phone', 'email'],
+//         }
+//       ],
+//     });
+
+//     if (friendships.length === 0) {
+//       return res.json({ message: 'No friends found' });
+//     }
+
+
+//     res.status(200).json({ friends:friendships });
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).json({ message: err.message });
+//   }
+// };
 
 
 

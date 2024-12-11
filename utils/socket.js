@@ -3,25 +3,27 @@ const Message = require("../models/Message");
 const connectedUsers = new Map(); // Store connected users by socket ID
 let socketio
 const initializeSocket = (io) => {
-  socketio = io; // Store socket.io instance for later use
+  socketio = io;
 
   io.on('connection', (socket) => {
-    console.log('User connected:', socket.id);
-
-    // Store user ID when they join
     socket.on('join', (userId) => {
-      connectedUsers.set(socket.id, userId);
-      console.log(`User ${userId} connected`);
+      const userIdInConnectUser = connectedUsers.get(socket.id);
+      if(!userIdInConnectUser){
+        connectedUsers.set(socket.id, userId);
+        console.log(`User ${userId} connected`);
+        io.emit('userStatus', { userId, status: 'online' });
+
+      }
+     
     });
+
+    
 
     // Handle private messages
     socket.on('privateMessage', async (data) => {
       const { content, senderId, receiverId } = data;
-
-      // Save message to database
       const message = await Message.create({ content, senderId, receiverId });
 
-      // Emit to specific user if they're online
       const targetSocket = [...connectedUsers.entries()].find(([, id]) => id === receiverId)?.[0];
       if (targetSocket) {
         io.to(targetSocket).emit('receiveMessage', message);
@@ -35,7 +37,6 @@ const initializeSocket = (io) => {
       // Save message to database
       const message = await Message.create({ content, senderId, groupId });
 
-      // Emit to all users in the group
       io.emit(`group_${groupId}`, message);
     });
 
@@ -53,11 +54,26 @@ const initializeSocket = (io) => {
         io.emit(`stopTyping_${chatId}`, { userId });
       });
 
+      socket.on('checkStatus', ({id}) => {
+        const userId = connectedUsers.get(socket.id);
+        if(userId==id){
+          io.emit('userStatus', { userId, status: 'online' });
+        }
+        else{ 
+          io.emit('userStatus', { userId, status: 'offline' });
+        }
+      });
+
+
 
     // Handle disconnection
     socket.on('disconnect', () => {
-      console.log('User disconnected:', socket.id);
-      connectedUsers.delete(socket.id);
+      const userId = connectedUsers.get(socket.id);
+      if (userId) {
+        console.log(`User ${userId} disconnected`);
+        connectedUsers.delete(socket.id);
+        io.emit('userStatus', { userId, status: 'offline' });
+      }
     });
   });
 };

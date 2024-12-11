@@ -41,16 +41,24 @@ exports.login = async (req, res) => {
 
 
 exports.getLoginUser = async (req, res) => {
-  const id = req.user.id
-  try {
-    const user = await User.findOne({ where: { id } });
-    if (!user) return res.status(404).json({ message: 'User not found' });
 
-    res.json({ user });
-  } catch (err) {
-    console.log(err.message)
-    res.status(500).json({ message: err.message });
+  const id = req.user.id
+
+  if(id){
+    try {
+      const user = await User.findOne({ where: { id } });
+      if (!user) return res.status(404).json({ message: 'User not found' });
+      res.json({ user });
+    } catch (err) {
+      console.log(err.message)
+      res.status(500).json({ message: err.message });
+    }
+
   }
+  else{
+    res.status(401).json({ message: 'Not authorized' });
+  }
+
 };
 
 
