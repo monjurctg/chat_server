@@ -1,12 +1,13 @@
 const Message = require("../models/Message");
 
-const connectedUsers = new Map(); // Store connected users by socket ID
+const connectedUsers = new Map();
 let socketio
 const initializeSocket = (io) => {
   socketio = io;
 
   io.on('connection', (socket) => {
     socket.on('join', (userId) => {
+
       const userIdInConnectUser = connectedUsers.get(socket.id);
       if(!userIdInConnectUser){
         connectedUsers.set(socket.id, userId);
@@ -14,10 +15,15 @@ const initializeSocket = (io) => {
         io.emit('userStatus', { userId, status: 'online' });
 
       }
-     
+
     });
 
-    
+    socket.on('userConnected', (userId) => {
+      connectedUsers.set(userId, socket.id);
+      broadcastUserStatus(userId, true)
+    });
+
+
 
     // Handle private messages
     socket.on('privateMessage', async (data) => {
@@ -59,7 +65,7 @@ const initializeSocket = (io) => {
         if(userId==id){
           io.emit('userStatus', { userId, status: 'online' });
         }
-        else{ 
+        else{
           io.emit('userStatus', { userId, status: 'offline' });
         }
       });
@@ -77,6 +83,9 @@ const initializeSocket = (io) => {
     });
   });
 };
+function broadcastUserStatus(userId, isOnline) {
+  io.emit('checkStatus', { userId, isOnline });
+}
 const getIOInstance = () => {
   if (!socketio) {
     throw new Error("Socket.IO has not been initialized!");
