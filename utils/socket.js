@@ -44,13 +44,30 @@ const initializeSocket = (io) => {
 
     // Handle typing
     socket.on('typing', ({ chatId, userId }) => {
+      const recipientSocketId = connectedUsers.get(chatId);
+      if (recipientSocketId) {
+            io.to(recipientSocketId).emit('typing', { userId });
+      }
+      else{
+        socket.to(chatId).emit('typing', { userId });
 
-      console.log(`User ${userId} is typing in chat ${chatId}`);
-      socket.to(chatId).emit('typing', { userId });
+      }
+
+      // console.log(`User ${userId} is typing in chat ${chatId}`);
+      // socket.to(chatId).emit('typing', { userId });
     });
 
     socket.on('stopTyping', ({ chatId, userId }) => {
-      socket.to(chatId).emit(`stopTyping_${chatId}`, { userId  });
+      const recipientSocketId = connectedUsers.get(chatId);
+      if (recipientSocketId) {
+            io.to(recipientSocketId).emit('stopTyping', { userId });
+      }
+      else{
+        socket.to(chatId).emit(`stopTyping`, { userId  });
+
+      }
+
+
     });
 
     // Handle fetching friends' statuses
