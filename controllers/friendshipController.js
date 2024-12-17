@@ -5,11 +5,46 @@ const sequelize = require('../config/database');
 
 
 
+// exports.getSuggestUser = async (req, res) => {
+//   try {
+//     const authUserId = req.user.id;
+//     const friendships = await Friendship.findAll({
+//       where: {
+//         [Op.or]: [
+//           { senderId: authUserId },
+//           { receiverId: authUserId },
+//         ],
+//       },
+//       attributes: ['senderId', 'receiverId', 'status'],
+//     });
+
+//     // Extract IDs of friends or pending requests
+//     const excludedIds = friendships
+//       .filter(f => f.status === 'accepted')
+//       .map(f => (f.senderId === authUserId ? f.receiverId : f.senderId));
+//     excludedIds.push(authUserId);
+//     const users = await User.findAll({
+//       where: {
+//         id: { [Op.notIn]: excludedIds },
+//       },
+//       attributes: { exclude: ['password'] },
+//       order: sequelize.random(),
+//       limit: 10,
+//     });
+
+//     res.json(users);
+//   } catch (err) {
+//     console.log(err);
+//     res.status(500).json({ message: err.message });
+//   }
+// };
+
+
 exports.getSuggestUser = async (req, res) => {
   try {
-    const authUserId = req.user.id; // Authenticated user's ID
+    const authUserId = req.user.id;
 
-    // Find all friendships where the authenticated user is either sender or receiver
+    // Fetch all friendships of the authenticated user
     const friendships = await Friendship.findAll({
       where: {
         [Op.or]: [
@@ -17,30 +52,28 @@ exports.getSuggestUser = async (req, res) => {
           { receiverId: authUserId },
         ],
       },
-      attributes: ['senderId', 'receiverId', 'status'], // Include friendship status
+      attributes: ['senderId', 'receiverId'],
     });
 
-    // Extract IDs of friends or pending requests
-    const excludedIds = friendships
-      .filter(f => f.status === 'accepted')
-      .map(f => (f.senderId === authUserId ? f.receiverId : f.senderId));
+    // Extract IDs of all related users (sender and receiver)
+    const excludedIds = friendships.map(f =>
+      f.senderId === authUserId ? f.receiverId : f.senderId
+    );
+    excludedIds.push(authUserId); // Exclude the authenticated user as well
 
-    // Add the authenticated user's ID to the exclusion list
-    excludedIds.push(authUserId);
-
-    // Fetch random users excluding self, friends, and those with pending requests
+    // Fetch suggested users excluding the excludedIds
     const users = await User.findAll({
       where: {
-        id: { [Op.notIn]: excludedIds },
+        id: { [Op.notIn]: excludedIds }, // Exclude friends and pending users
       },
-      attributes: { exclude: ['password'] }, // Exclude sensitive data
-      order: sequelize.random(), // Randomize results
-      limit: 10, // Adjust limit as needed
+      attributes: { exclude: ['password'] }, // Do not include the password field
+      order: sequelize.random(), // Randomize the order of users
+      limit: 10, // Limit the number of results
     });
 
-    res.json(users);
+    res.json(users); // Send the suggested users as the response
   } catch (err) {
-    console.log(err);
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 };

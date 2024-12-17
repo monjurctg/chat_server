@@ -8,6 +8,8 @@ const { listFriends,acceptFriendRequest,sendFriendRequest,declineFriendRequest,g
 // Send Friend Request
 router.post('/sendRequest',authMiddleware, sendFriendRequest);
 router.get('/suggest_user',authMiddleware, getSuggestUser);
+// router.get('/suggest_user', getSuggestUser);
+
 
 // Respond to Friend Request (Accept/Decline)
 router.post('/respondRequest',authMiddleware, acceptFriendRequest);
