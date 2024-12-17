@@ -51,6 +51,7 @@ exports.getSuggestUser = async (req, res) => {
           { senderId: authUserId },
           { receiverId: authUserId },
         ],
+        status: 'accepted',
       },
       attributes: ['senderId', 'receiverId'],
     });
